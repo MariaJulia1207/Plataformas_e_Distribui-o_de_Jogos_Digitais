@@ -21,34 +21,16 @@ public class BootSceneLoader : MonoBehaviour
             Debug.Log("BootSceneLoader: Target scene is the Boot scene itself. Nothing to load.");
             yield break;
         }
-
-        // Load the target scene additively
-        var loadOp = SceneManager.LoadSceneAsync(target.TargetSceneName, LoadSceneMode.Additive);
-        if (loadOp == null)
+        // Delegate the boot loading to GameManager which centralizes SceneManager access
+        var gm = GameManager.Instance;
+        if (gm == null)
         {
-            Debug.LogError($"BootSceneLoader: Failed to start loading scene '{target.TargetSceneName}'. Ensure it is added to Build Settings and the name is correct.");
+            Debug.LogError("BootSceneLoader: GameManager instance not found. Ensure GameManager exists in the project or in _Boot scene.");
             yield break;
         }
 
-        while (!loadOp.isDone)
-            yield return null;
-
-        // Optionally, set the newly loaded scene as active
-        var loadedScene = SceneManager.GetSceneByName(target.TargetSceneName);
-        if (loadedScene.IsValid())
-            SceneManager.SetActiveScene(loadedScene);
-
-        // Unload the Boot scene
-        var unloadOp = SceneManager.UnloadSceneAsync(currentScene);
-        if (unloadOp == null)
-        {
-            Debug.LogWarning("BootSceneLoader: Failed to unload Boot scene.");
-            yield break;
-        }
-
-        while (!unloadOp.isDone)
-            yield return null;
-
-        Debug.Log($"BootSceneLoader: Loaded '{target.TargetSceneName}' and unloaded Boot scene.");
+        gm.StartBootLoad(target.TargetSceneName);
+        // GameManager will perform loading/unloading. We can stop this coroutine immediately.
+        yield break;
     }
 }
