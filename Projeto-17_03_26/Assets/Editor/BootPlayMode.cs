@@ -3,6 +3,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System;
 
 // Clean BootPlayMode implementation
 [InitializeOnLoad]
@@ -134,20 +135,23 @@ internal static class BootPlayMode
             var sc = SceneManager.GetSceneAt(i);
             if (!sc.IsValid() || !sc.isLoaded)
                 continue;
-            if (string.Equals(sc.path, scene.path, System.StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sc.path, scene.path, StringComparison.OrdinalIgnoreCase))
                 continue; // don't unload the scene we just loaded
 
             string filename = Path.GetFileNameWithoutExtension(sc.path);
-            bool matchBySavedPath = !string.IsNullOrEmpty(savedBootPath) && string.Equals(sc.path, savedBootPath, System.StringComparison.OrdinalIgnoreCase);
-            bool matchByName = string.Equals(sc.name, BootSceneName, System.StringComparison.OrdinalIgnoreCase);
-            bool matchByFilename = string.Equals(filename, BootSceneName, System.StringComparison.OrdinalIgnoreCase);
-            bool matchByContains = (!string.IsNullOrEmpty(sc.name) && sc.name.IndexOf(BootSceneName, System.StringComparison.OrdinalIgnoreCase) >= 0)
-                                   || (!string.IsNullOrEmpty(filename) && filename.IndexOf(BootSceneName, System.StringComparison.OrdinalIgnoreCase) >= 0);
+            bool matchBySavedPath = !string.IsNullOrEmpty(savedBootPath) && string.Equals(sc.path, savedBootPath, StringComparison.OrdinalIgnoreCase);
+            bool matchByName = string.Equals(sc.name, BootSceneName, StringComparison.OrdinalIgnoreCase);
+            bool matchByFilename = string.Equals(filename, BootSceneName, StringComparison.OrdinalIgnoreCase);
+            bool matchByContains = (!string.IsNullOrEmpty(sc.name) && sc.name.IndexOf(BootSceneName, StringComparison.OrdinalIgnoreCase) >= 0)
+                                   || (!string.IsNullOrEmpty(filename) && filename.IndexOf(BootSceneName, StringComparison.OrdinalIgnoreCase) >= 0);
 
-            if (matchBySavedPath || matchByName || matchByFilename || matchByContains)
+            // New: inspect scene contents for runtime marker components (GameManager/BootMarker)
+            bool matchByMarker = SceneContainsBootMarker(sc);
+
+            if (matchBySavedPath || matchByName || matchByFilename || matchByContains || matchByMarker)
             {
                 SceneManager.UnloadSceneAsync(sc);
-                Debug.Log($"BootPlayMode: unloading scene '{sc.name}' (path: {sc.path}) detected as Boot.");
+                Debug.Log($"BootPlayMode: unloading scene '{sc.name}' (path: {sc.path}) detected as Boot. matchBySavedPath={matchBySavedPath} matchByName={matchByName} matchByFilename={matchByFilename} matchByContains={matchByContains} matchByMarker={matchByMarker}");
                 unloadedAny = true;
             }
         }
@@ -180,18 +184,21 @@ internal static class BootPlayMode
             var sc = SceneManager.GetSceneAt(i);
             if (!sc.IsValid() || !sc.isLoaded)
                 continue;
-            if (string.Equals(sc.path, orig.path, System.StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sc.path, orig.path, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             string filename = Path.GetFileNameWithoutExtension(sc.path);
-            bool matchBySavedPath = !string.IsNullOrEmpty(savedBootPath) && string.Equals(sc.path, savedBootPath, System.StringComparison.OrdinalIgnoreCase);
-            bool matchByName = string.Equals(sc.name, BootSceneName, System.StringComparison.OrdinalIgnoreCase);
-            bool matchByFilename = string.Equals(filename, BootSceneName, System.StringComparison.OrdinalIgnoreCase);
+            bool matchBySavedPath = !string.IsNullOrEmpty(savedBootPath) && string.Equals(sc.path, savedBootPath, StringComparison.OrdinalIgnoreCase);
+            bool matchByName = string.Equals(sc.name, BootSceneName, StringComparison.OrdinalIgnoreCase);
+            bool matchByFilename = string.Equals(filename, BootSceneName, StringComparison.OrdinalIgnoreCase);
 
-            if (matchBySavedPath || matchByName || matchByFilename)
+            // New: also detect scenes that contain runtime boot marker (GameManager/BootMarker)
+            bool matchByMarker = SceneContainsBootMarker(sc);
+
+            if (matchBySavedPath || matchByName || matchByFilename || matchByMarker)
             {
                 SceneManager.UnloadSceneAsync(sc);
-                Debug.Log($"BootPlayMode: (deferred) unloading scene '{sc.name}' (path: {sc.path}) detected as Boot.");
+                Debug.Log($"BootPlayMode: (deferred) unloading scene '{sc.name}' (path: {sc.path}) detected as Boot. matchBySavedPath={matchBySavedPath} matchByName={matchByName} matchByFilename={matchByFilename} matchByMarker={matchByMarker}");
                 unloadedAny = true;
             }
         }
@@ -202,6 +209,46 @@ internal static class BootPlayMode
         pendingOriginalPath = null;
         if (EditorPrefs.HasKey(PrefBootPath))
             EditorPrefs.DeleteKey(PrefBootPath);
+    }
+
+    // Helper: inspect scene root objects and their children for a GameManager/BootMarker marker
+    private static bool SceneContainsBootMarker(Scene sc)
+    {
+        if (!sc.IsValid() || !sc.isLoaded)
+            return false;
+        try
+        {
+            var roots = sc.GetRootGameObjects();
+            foreach (var go in roots)
+            {
+                if (go == null)
+                    continue;
+
+                // 1) Name-based detection
+                if (string.Equals(go.name, "GameManager", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(go.name, "BootMarker", StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                // 2) Component name detection on root
+                if (go.GetComponent("GameManager") != null || go.GetComponent("BootMarker") != null)
+                    return true;
+
+                // 3) Scan children
+                var transforms = go.GetComponentsInChildren<Transform>(true);
+                foreach (var t in transforms)
+                {
+                    if (t == null || t.gameObject == null)
+                        continue;
+                    if (string.Equals(t.name, "GameManager", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(t.name, "BootMarker", StringComparison.OrdinalIgnoreCase))
+                        return true;
+                    if (t.gameObject.GetComponent("GameManager") != null || t.gameObject.GetComponent("BootMarker") != null)
+                        return true;
+                }
+            }
+        }
+        catch { }
+        return false;
     }
 
     private static void HandleEnteredEditMode()

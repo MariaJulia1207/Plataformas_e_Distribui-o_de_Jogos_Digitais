@@ -7,7 +7,8 @@ public class BootSceneTarget : ScriptableObject
     public string TargetScenePath;
 
     // Scene name (filename without extension). Used at runtime to load the scene by name.
-    public string TargetSceneName;
+    [Tooltip("Scene name (filename without extension) that the Boot scene will redirect to. Defaults to 'Splash'.")]
+    public string TargetSceneName = "Splash";
 }
 
 
