@@ -188,6 +188,18 @@ public class GameManager : MonoBehaviour
             Debug.LogWarning($"GameManager: falha ao alocar inputs: {ex}");
         }
 
+        // If we just entered a Gameplay scene, ensure the GUI scene is loaded additively.
+        if (sceneName != null && (sceneName.ToLowerInvariant().Contains("sample") || sceneName.ToLowerInvariant().Contains("game")))
+        {
+            yield return StartCoroutine(EnsureGuiLoaded());
+            SetState(GameState.Gameplay);
+        }
+        else
+        {
+            // leaving gameplay: unload GUI if present
+            yield return StartCoroutine(EnsureGuiUnloaded());
+        }
+
         _isLoadingScene = false;
         Debug.Log($"GameManager: cena '{sceneName}' carregada.");
     }
@@ -239,8 +251,53 @@ public class GameManager : MonoBehaviour
         yield return null;
         AllocateInputToPlayer();
 
+        // If the boot target is a gameplay scene, ensure GUI loaded
+        if (targetSceneName != null && (targetSceneName.ToLowerInvariant().Contains("sample") || targetSceneName.ToLowerInvariant().Contains("game")))
+        {
+            yield return StartCoroutine(EnsureGuiLoaded());
+            SetState(GameState.Gameplay);
+        }
+        else if (targetSceneName != null && targetSceneName.ToLowerInvariant().Contains("menu"))
+        {
+            // ensure GUI is not loaded when entering menu
+            yield return StartCoroutine(EnsureGuiUnloaded());
+            SetState(GameState.MenuPrincipal);
+        }
         _isLoadingScene = false;
         Debug.Log($"GameManager: Boot sequence complete. Loaded '{targetSceneName}'.");
+    }
+
+    private bool IsSceneLoaded(string name)
+    {
+        for (int i = 0; i < SceneManager.sceneCount; ++i)
+        {
+            var sc = SceneManager.GetSceneAt(i);
+            if (!sc.IsValid() || !sc.isLoaded) continue;
+            if (string.Equals(sc.name, name, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
+    }
+
+    private IEnumerator EnsureGuiLoaded()
+    {
+        const string guiName = "GUI";
+        if (IsSceneLoaded(guiName)) yield break;
+        var op = SceneManager.LoadSceneAsync(guiName, LoadSceneMode.Additive);
+        if (op == null) { Debug.LogWarning("GameManager: GUI scene not found or not in Build Settings."); yield break; }
+        while (!op.isDone) yield return null;
+        yield return null;
+    }
+
+    private IEnumerator EnsureGuiUnloaded()
+    {
+        const string guiName = "GUI";
+        if (!IsSceneLoaded(guiName)) yield break;
+        var sc = SceneManager.GetSceneByName(guiName);
+        if (!sc.IsValid()) yield break;
+        var op = SceneManager.UnloadSceneAsync(sc);
+        if (op == null) yield break;
+        while (!op.isDone) yield return null;
+        yield return null;
     }
 
     /// <summary>
@@ -300,6 +357,7 @@ public class GameManager : MonoBehaviour
 #endif
     }
 }
+
 
 
 
