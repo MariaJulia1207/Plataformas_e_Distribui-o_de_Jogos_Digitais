@@ -19,10 +19,12 @@ public class PlayerCoinCollector : MonoBehaviour
 	{
 		if (amount == 0) return;
 		totalCoins += amount;
+		Debug.Log($"PlayerCoinCollector: Player '{gameObject.name}' collected {amount} coins. Total now={totalCoins}");
 		PlayerObserverManager.PublishCoinCollected(amount);
 		PlayerObserverManager.PublishCoinTotal(totalCoins);
 	}
 
 	public int GetTotal() => totalCoins;
 }
+
 

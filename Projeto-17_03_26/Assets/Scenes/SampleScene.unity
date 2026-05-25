@@ -2122,8 +2122,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CoinSpawner
   coinPrefab: {fileID: 4432693616671007467, guid: d788dd2baf6425242a348b86e30cb3c6, type: 3}
   rows: 12
-  cols: 20
-  start: {x: -4, y: 0, z: -2}
+  cols: 10
+  start: {x: -20, y: 0, z: -5}
   spacing: {x: 3, y: 0, z: 1.5}
 --- !u!1 &1027315847
 GameObject:
@@ -2827,7 +2827,6 @@ GameObject:
   - component: {fileID: 1502238911}
   - component: {fileID: 1502238910}
   - component: {fileID: 1502238909}
-  - component: {fileID: 1502238912}
   m_Layer: 0
   m_Name: Bola
   m_TagString: Player
@@ -2966,7 +2965,7 @@ MonoBehaviour:
       m_Calls: []
   m_ActionEvents: []
   m_NeverAutoSwitchControlSchemes: 0
-  m_DefaultControlScheme: 
+  m_DefaultControlScheme: Keyboard&Mouse
   m_DefaultActionMap: 
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
@@ -2997,18 +2996,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &1502238912
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1502238904}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9523398cd580402884e3530962cff274, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerCoinCollector
 --- !u!1 &1536168989
 GameObject:
   m_ObjectHideFlags: 0

@@ -17,6 +17,7 @@ public class Coin : MonoBehaviour
 	{
 		if (other.CompareTag("Player"))
 		{
+			Debug.Log($"Coin: '{gameObject.name}' collected by '{other.gameObject.name}' (tag={other.gameObject.tag}) value={value}");
 			var pc = other.GetComponent<PlayerCoinCollector>();
 			if (pc != null)
 			{
@@ -33,4 +34,5 @@ public class Coin : MonoBehaviour
 		}
 	}
 }
+
 

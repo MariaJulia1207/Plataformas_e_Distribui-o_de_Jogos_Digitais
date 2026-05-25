@@ -22,6 +22,9 @@ public class GameManagerCore : MonoBehaviour
 
     [Header("Optional PlayerInput holder (assign GameObject with PlayerInput)")]
     public MonoBehaviour playerInputHolder;
+    [Header("Scene names")]
+    public string guiSceneName = "GUI";
+    public string bootSceneName = "_Boot";
 
     private GameState _state = GameState.Iniciando;
 
@@ -52,6 +55,19 @@ public class GameManagerCore : MonoBehaviour
         if (_state == newState) return;
         Debug.Log($"GameManagerCore: State change {_state} -> {newState}");
         _state = newState;
+        // react to certain states: load/unload GUI when entering/exiting Gameplay
+        if (_state == GameState.Gameplay)
+        {
+            // load GUI additively if not already loaded
+            if (!IsSceneLoaded(guiSceneName))
+                StartCoroutine(LoadGuiAdditive());
+        }
+        else
+        {
+            // if leaving gameplay, unload GUI if loaded
+            if (IsSceneLoaded(guiSceneName))
+                StartCoroutine(UnloadGui());
+        }
     }
 
     public void ForceSceneChange(string sceneName)
@@ -117,6 +133,28 @@ public class GameManagerCore : MonoBehaviour
         else SetState(GameState.Gameplay);
     }
 
+    private IEnumerator LoadGuiAdditive()
+    {
+        if (string.IsNullOrEmpty(guiSceneName)) yield break;
+        if (IsSceneLoaded(guiSceneName)) yield break;
+        Debug.Log($"GameManagerCore: Loading GUI scene '{guiSceneName}' additively.");
+        var op = SceneManager.LoadSceneAsync(guiSceneName, LoadSceneMode.Additive);
+        if (op == null) { Debug.LogWarning($"GameManagerCore: Failed to start loading GUI scene '{guiSceneName}'."); yield break; }
+        while (!op.isDone) yield return null;
+        Debug.Log("GameManagerCore: GUI scene loaded.");
+    }
+
+    private IEnumerator UnloadGui()
+    {
+        if (string.IsNullOrEmpty(guiSceneName)) yield break;
+        if (!IsSceneLoaded(guiSceneName)) yield break;
+        Debug.Log($"GameManagerCore: Unloading GUI scene '{guiSceneName}'.");
+        var op = SceneManager.UnloadSceneAsync(guiSceneName);
+        if (op == null) { Debug.LogWarning($"GameManagerCore: Failed to start unloading GUI scene '{guiSceneName}'."); yield break; }
+        while (!op.isDone) yield return null;
+        Debug.Log("GameManagerCore: GUI scene unloaded.");
+    }
+
     private bool SceneContainsGameManager(Scene sc)
     {
         if (!sc.IsValid() || !sc.isLoaded) return false;
@@ -134,6 +172,13 @@ public class GameManagerCore : MonoBehaviour
         return false;
     }
 
+    private bool IsSceneLoaded(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return false;
+        var sc = SceneManager.GetSceneByName(name);
+        return sc.IsValid() && sc.isLoaded;
+    }
+
 #if ENABLE_INPUT_SYSTEM
     private void AllocateInputToPlayer()
     {
@@ -148,5 +193,6 @@ public class GameManagerCore : MonoBehaviour
     }
 #endif
 }
+
 
 

@@ -42,6 +42,31 @@ public class PlayerController : MonoBehaviour
         var col = GetComponent<Collider>();
         if (col != null)
             groundCheckDistance = col.bounds.extents.y + 0.05f;
+
+        // If there are multiple PlayerController instances (for example one in _Boot and one in the loaded scene),
+        // prefer the one that is NOT in the _Boot scene. This prevents duplicate player objects when Boot contains a placeholder.
+        var players = FindObjectsOfType<PlayerController>();
+        if (players != null && players.Length > 1)
+        {
+            PlayerController keeper = null;
+            foreach (var p in players)
+            {
+                if (p == null) continue;
+                // prefer player that is not in the Boot scene
+                if (!string.Equals(p.gameObject.scene.name, "_Boot", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    keeper = p;
+                    break;
+                }
+            }
+            if (keeper == null) keeper = players[0];
+            if (keeper != this)
+            {
+                Debug.Log("PlayerController: duplicate player detected — destroying secondary instance.");
+                Destroy(this.gameObject);
+                return;
+            }
+        }
     }
 
     void OnEnable()
