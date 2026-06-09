@@ -13,6 +13,11 @@ internal static class EnsureBootSceneTarget
 
     private static void EnsureAssetExists()
     {
+        // Avoid running editor-only asset/scene modifications while play mode is starting or playing.
+        // Editor APIs used below (AssetDatabase, EditorSceneManager.OpenScene, etc.) can throw when
+        // invoked during Play Mode transitions. Defer until edit-time.
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            return;
         var asset = AssetDatabase.LoadAssetAtPath<BootSceneTarget>(ResourceAssetPath);
         if (asset == null)
         {
@@ -31,6 +36,13 @@ internal static class EnsureBootSceneTarget
 
     private static void EnsureBootSceneHasLoader()
     {
+        // Don't attempt to open or modify scenes while entering or in Play Mode -
+        // EditorSceneManager.OpenScene and other editor scene APIs are not allowed
+        // during play and will throw InvalidOperationException.
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+        {
+            return;
+        }
         // Find boot scene path
         var guids = AssetDatabase.FindAssets("t:Scene");
         string bootPath = null;
@@ -115,5 +127,7 @@ internal static class EnsureBootSceneTarget
         UnityEditor.SceneManagement.EditorSceneManager.OpenScene(active.path, UnityEditor.SceneManagement.OpenSceneMode.Single);
     }
 }
+
+
 
 
