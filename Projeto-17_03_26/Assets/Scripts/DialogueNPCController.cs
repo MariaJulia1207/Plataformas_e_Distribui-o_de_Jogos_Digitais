@@ -1,3 +1,4 @@
+/*
 using UnityEngine;
 
 public class DialogueNPCController : MonoBehaviour
@@ -11,3 +12,4 @@ public class DialogueNPCController : MonoBehaviour
     
     
 }
+*/ 
